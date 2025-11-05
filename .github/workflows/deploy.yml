@@ -1,0 +1,120 @@
+name: Deploy to OpenShift
+
+on:
+  repository_dispatch:
+    types: [deploy-trigger]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy with Helm to OpenShift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install OpenShift CLI
+        run: |
+          curl -sLO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xzf openshift-client-linux.tar.gz
+          sudo mv oc /usr/local/bin/
+          sudo chmod +x /usr/local/bin/oc
+          oc version --client
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+
+      - name: Login to OpenShift
+        run: |
+          oc login --token=${{ secrets.OPENSHIFT_TOKEN }} --server=${{ secrets.OPENSHIFT_SERVER }} --insecure-skip-tls-verify=true
+
+      - name: Create namespace if not exists
+        run: |
+          oc get namespace ${{ secrets.OPENSHIFT_NAMESPACE }} || oc create namespace ${{ secrets.OPENSHIFT_NAMESPACE }}
+
+      - name: Verify Helm Chart
+        run: |
+          helm lint ./helm/comments-system
+
+      - name: Dry-run Helm deployment
+        run: |
+          helm upgrade --install comments-system ./helm/comments-system \
+            --namespace ${{ secrets.OPENSHIFT_NAMESPACE }} \
+            --dry-run --debug
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install comments-system ./helm/comments-system \
+            --namespace ${{ secrets.OPENSHIFT_NAMESPACE }} \
+            --create-namespace \
+            --wait \
+            --timeout 10m \
+            --set global.namespace=${{ secrets.OPENSHIFT_NAMESPACE }} \
+            --set global.dockerUser=${{ secrets.DOCKERHUB_USERNAME }}
+
+      - name: Verify Deployment
+        run: |
+          echo "===================================="
+          echo "Checking Deployments Status"
+          echo "===================================="
+          oc get deployments -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+          
+          echo ""
+          echo "===================================="
+          echo "Checking Pods Status"
+          echo "===================================="
+          oc get pods -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+          
+          echo ""
+          echo "===================================="
+          echo "Checking Services"
+          echo "===================================="
+          oc get services -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+          
+          echo ""
+          echo "===================================="
+          echo "Checking Routes"
+          echo "===================================="
+          oc get routes -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+          
+          echo ""
+          echo "===================================="
+          echo "Application URL"
+          echo "===================================="
+          oc get route -n ${{ secrets.OPENSHIFT_NAMESPACE }} -o jsonpath='{.items[0].spec.host}' || echo "Route not found"
+
+      - name: Wait for Pods to be Ready
+        run: |
+          echo "Waiting for all pods to be ready..."
+          oc wait --for=condition=Ready pods --all -n ${{ secrets.OPENSHIFT_NAMESPACE }} --timeout=600s
+
+      - name: Display Application Info
+        run: |
+          echo "========================================="
+          echo "✅ Deployment Successful!"
+          echo "========================================="
+          echo ""
+          echo "Application URL:"
+          ROUTE_URL=$(oc get route -n ${{ secrets.OPENSHIFT_NAMESPACE }} -o jsonpath='{.items[0].spec.host}')
+          echo "https://$ROUTE_URL"
+          echo ""
+          echo "Namespace: ${{ secrets.OPENSHIFT_NAMESPACE }}"
+          echo "Release: comments-system"
+          echo "========================================="
+
+      - name: Helm Release Info
+        if: always()
+        run: |
+          helm list -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+          helm status comments-system -n ${{ secrets.OPENSHIFT_NAMESPACE }}
