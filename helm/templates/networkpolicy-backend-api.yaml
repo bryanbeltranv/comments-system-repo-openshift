@@ -1,0 +1,48 @@
+{{- if .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "comments-system.fullname" . }}-backend-api
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "comments-system.backend-api.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "comments-system.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Permitir tráfico desde frontend
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: {{ include "comments-system.name" . }}
+          app.kubernetes.io/instance: {{ .Release.Name }}
+          app.kubernetes.io/component: frontend
+    ports:
+    - protocol: TCP
+      port: {{ .Values.ports.backendApi }}
+  egress:
+  # Permitir llamadas al backend-data
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: {{ include "comments-system.name" . }}
+          app.kubernetes.io/instance: {{ .Release.Name }}
+          app.kubernetes.io/component: backend-data
+    ports:
+    - protocol: TCP
+      port: {{ .Values.ports.backendData }}
+  # Permitir DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-dns
+    ports:
+    - protocol: UDP
+      port: 53
+{{- end }}

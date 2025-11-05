@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Comentarios</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .comments {
+            margin-top: 30px;
+        }
+        .comment {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .comment h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .comment p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            background: #ffe6e6;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            padding: 10px;
+            background: #e6ffe6;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💬 Sistema de Comentarios</h1>
+        
+        <div id="message"></div>
+        
+        <form id="commentForm">
+            <div class="form-group">
+                <label for="author">Autor:</label>
+                <input type="text" id="author" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="content">Comentario:</label>
+                <textarea id="content" rows="4" required></textarea>
+            </div>
+            
+            <button type="submit">Enviar Comentario</button>
+        </form>
+        
+        <div class="comments">
+            <h2>Comentarios Recientes</h2>
+            <div id="commentsList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de la API
+        const API_URL = window.location.origin.replace(/:\d+/, '') + ':8080/api';
+        
+        // Cargar comentarios al inicio
+        loadComments();
+
+        // Manejar envío del formulario
+        document.getElementById('commentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const author = document.getElementById('author').value;
+            const content = document.getElementById('content').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ author, content })
+                });
+                
+                if (response.ok) {
+                    showMessage('Comentario enviado exitosamente!', 'success');
+                    document.getElementById('commentForm').reset();
+                    loadComments();
+                } else {
+                    showMessage('Error al enviar el comentario', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión: ' + error.message, 'error');
+            }
+        });
+
+        // Cargar comentarios
+        async function loadComments() {
+            try {
+                const response = await fetch(`${API_URL}/comments`);
+                const comments = await response.json();
+                
+                const commentsList = document.getElementById('commentsList');
+                
+                if (comments.length === 0) {
+                    commentsList.innerHTML = '<p>No hay comentarios aún. ¡Sé el primero en comentar!</p>';
+                    return;
+                }
+                
+                commentsList.innerHTML = comments.map(comment => `
+                    <div class="comment">
+                        <h3>${escapeHtml(comment.author)}</h3>
+                        <p>${escapeHtml(comment.content)}</p>
+                        <p style="font-size: 12px; color: #999;">
+                            ${new Date(comment.created_at).toLocaleString()}
+                        </p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Error al cargar comentarios: ' + error.message, 'error');
+            }
+        }
+
+        // Mostrar mensajes
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = type;
+            messageDiv.textContent = text;
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 3000);
+        }
+
+        // Escapar HTML para prevenir XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Recargar comentarios cada 30 segundos
+        setInterval(loadComments, 30000);
+    </script>
+</body>
+</html>

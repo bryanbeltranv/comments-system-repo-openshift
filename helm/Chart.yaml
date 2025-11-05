@@ -1,0 +1,13 @@
+apiVersion: v2
+name: comments-system
+description: Sistema de comentarios con frontend, backend-api, backend-data y PostgreSQL
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - comments
+  - microservices
+  - postgresql
+maintainers:
+  - name: Bryan Beltran
+    email: tu-email@example.com

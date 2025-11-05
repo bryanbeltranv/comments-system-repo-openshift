@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "comments-system.fullname" . }}-database-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "comments-system.database.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.storage }}
+  {{- if .Values.postgresql.storageClass }}
+  storageClassName: {{ .Values.postgresql.storageClass }}
+  {{- end }}

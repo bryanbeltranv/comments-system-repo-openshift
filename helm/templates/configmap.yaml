@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "comments-system.fullname" . }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "comments-system.labels" . | nindent 4 }}
+data:
+  # Configuración de la base de datos
+  DB_HOST: "{{ include "comments-system.fullname" . }}-database"
+  DB_PORT: "{{ .Values.postgresql.port }}"
+  DB_NAME: "{{ .Values.postgresql.database }}"
+  DB_USER: "{{ .Values.postgresql.username }}"
+  
+  # Configuración de Backend Data
+  BACKEND_DATA_HOST: "{{ include "comments-system.fullname" . }}-backend-data"
+  BACKEND_DATA_PORT: "{{ .Values.ports.backendData }}"
+  BACKEND_DATA_URL: "http://{{ include "comments-system.fullname" . }}-backend-data:{{ .Values.ports.backendData }}"
+  
+  # Configuración de Backend API
+  BACKEND_API_HOST: "{{ include "comments-system.fullname" . }}-backend-api"
+  BACKEND_API_PORT: "{{ .Values.ports.backendApi }}"
+  BACKEND_API_URL: "http://{{ include "comments-system.fullname" . }}-backend-api:{{ .Values.ports.backendApi }}"
+  
+  # Configuración general
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
