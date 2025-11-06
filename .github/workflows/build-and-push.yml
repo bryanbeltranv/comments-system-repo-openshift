@@ -3,12 +3,16 @@ name: Build and Push Docker Images
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'frontend/**'
       - 'backend-api/**'
       - 'backend-data/**'
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -101,9 +105,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-frontend, build-backend-api, build-backend-data]
     steps:
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
+      - name: Trigger Deploy Workflow
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: deploy-trigger
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: 'master'
+            })
