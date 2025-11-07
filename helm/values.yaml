@@ -1,6 +1,6 @@
 # Configuración global
 global:
-  namespace: comments-system
+  namespace: bryan-beltran-dev
   dockerRegistry: docker.io
   dockerUser: bryanbeltranv
 
@@ -101,7 +101,7 @@ route:
 
 # NetworkPolicies
 networkPolicies:
-  enabled: false  # Disabled due to permission restrictions in OpenShift
+  enabled: true
   denyAll: true
 
 # Labels comunes
