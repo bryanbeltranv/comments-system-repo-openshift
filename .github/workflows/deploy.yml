@@ -45,17 +45,17 @@ jobs:
 
       - name: Verify Helm Chart
         run: |
-          helm lint ./helm/comments-system
+          helm lint ./helm
 
       - name: Dry-run Helm deployment
         run: |
-          helm upgrade --install comments-system ./helm/comments-system \
+          helm upgrade --install comments-system ./helm \
             --namespace ${{ secrets.OPENSHIFT_NAMESPACE }} \
             --dry-run --debug
 
       - name: Deploy with Helm
         run: |
-          helm upgrade --install comments-system ./helm/comments-system \
+          helm upgrade --install comments-system ./helm \
             --namespace ${{ secrets.OPENSHIFT_NAMESPACE }} \
             --create-namespace \
             --wait \
