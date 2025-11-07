@@ -57,10 +57,39 @@ jobs:
         run: |
           helm upgrade --install comments-system ./helm \
             --namespace ${{ secrets.OPENSHIFT_NAMESPACE }} \
-            --wait \
-            --timeout 10m \
             --set global.namespace=${{ secrets.OPENSHIFT_NAMESPACE }} \
             --set global.dockerUser=${{ secrets.DOCKERHUB_USERNAME }}
+
+      - name: Monitor Deployment Progress
+        run: |
+          echo "Waiting for deployments to be created..."
+          sleep 10
+
+          echo "===================================="
+          echo "Deployment Status"
+          echo "===================================="
+          oc get deployments -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+
+          echo ""
+          echo "===================================="
+          echo "Pod Status"
+          echo "===================================="
+          oc get pods -n ${{ secrets.OPENSHIFT_NAMESPACE }}
+
+          echo ""
+          echo "===================================="
+          echo "Pod Details (if any are not running)"
+          echo "===================================="
+          oc describe pods -n ${{ secrets.OPENSHIFT_NAMESPACE }} | grep -A 10 "Events:" || true
+
+          echo ""
+          echo "===================================="
+          echo "Checking pod logs for errors"
+          echo "===================================="
+          for pod in $(oc get pods -n ${{ secrets.OPENSHIFT_NAMESPACE }} -o name); do
+            echo "--- Logs for $pod ---"
+            oc logs $pod -n ${{ secrets.OPENSHIFT_NAMESPACE }} --tail=20 || echo "Could not fetch logs for $pod"
+          done
 
       - name: Verify Deployment
         run: |
