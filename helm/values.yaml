@@ -101,7 +101,7 @@ route:
 
 # NetworkPolicies
 networkPolicies:
-  enabled: true
+  enabled: false  # Disabled due to permission restrictions in OpenShift
   denyAll: true
 
 # Labels comunes
